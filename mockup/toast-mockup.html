@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Herdr 通知定稿</title>
+<style>
+  :root {
+    --bg: #f4f4f2; --panel: #ffffff; --line: #deded9; --ink: #1f2328; --ink-2: #4b5159; --ink-3: #656a72; --focus: #1f5fbf;
+    /* status badges: hue, lightness and glyph all differ, and none matches an agent's brand color. Must match icons.ps1. */
+    --ok: #0f7b0f; --wait: #f0a000; --init: #687078;
+    --w-desk: #d3d9e2; --w-desk-2: #e7ebf1; --w-toast: #f9f9f9; --w-line: rgba(0,0,0,.09);
+    --w-ink: #1a1a1a; --w-ink-2: #5d5d5d; --w-ink-3: #616161;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #17181a; --panel: #1f2023; --line: #33363b; --ink: #ececea; --ink-2: #b9bcc1; --ink-3: #9da1a8; --focus: #8ab4ff; }
+  }
+  :root[data-theme="dark"] { --bg: #17181a; --panel: #1f2023; --line: #33363b; --ink: #ececea; --ink-2: #b9bcc1; --ink-3: #9da1a8; --focus: #8ab4ff; }
+  [data-win="dark"] {
+    --w-desk: #1b2130; --w-desk-2: #283042; --w-toast: #2b2b2b; --w-line: rgba(255,255,255,.08);
+    --w-ink: #ffffff; --w-ink-2: #c8c8c8; --w-ink-3: #ababab;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.55 "Segoe UI Variable Text", "Segoe UI", "Microsoft JhengHei UI", system-ui, sans-serif; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 48px 24px 72px; }
+  h1 { font-size: 28px; line-height: 1.2; margin: 0 0 8px; font-weight: 650; letter-spacing: -.01em; }
+  .lede { margin: 0; color: var(--ink-2); max-width: 46em; text-wrap: pretty; }
+  h2 { font-size: 18px; margin: 0 0 16px; font-weight: 600; }
+
+  .bar { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: end; margin: 32px 0 16px; }
+  .group { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .group legend { font-size: 13px; color: var(--ink-3); margin-bottom: 6px; padding: 0; }
+  .seg { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  .seg label { position: relative; flex: 1; }
+  .seg input { position: absolute; opacity: 0; inset: 0; }
+  .seg span { display: block; text-align: center; padding: 6px 14px; border-radius: 6px; font-size: 14px; color: var(--ink-2); cursor: pointer; white-space: nowrap;
+              transition: background .15s, color .15s; }
+  .seg span:hover { color: var(--ink); }
+  .seg input:checked + span { background: var(--ink); color: var(--bg); font-weight: 600; }
+  .seg input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .desk { background: linear-gradient(160deg, var(--w-desk-2), var(--w-desk)); border-radius: 12px; border: 1px solid var(--line);
+          padding: 24px; display: grid; grid-template-columns: minmax(0, 364px); justify-content: end; gap: 12px; }
+  .desk figure { margin: 0; }  /* stacked bottom-right like Windows, 364 px = real toast width at 100% */
+
+  section { margin-top: 56px; }
+  .spec { display: grid; grid-template-columns: max-content 1fr; gap: 10px 24px; margin: 0; max-width: 46em; }
+  .spec dt { color: var(--ink-3); font-size: 14px; }
+  .spec dd { margin: 0; text-wrap: pretty; }
+  .spec code { font: 13.5px/1.4 "Cascadia Mono", Consolas, monospace; background: var(--panel); border: 1px solid var(--line); padding: 1px 6px; border-radius: 4px; }
+
+  /* Windows 11 toast, sized from a real one at 100% scale */
+  .toast { background: var(--w-toast); color: var(--w-ink); border: 1px solid var(--w-line); border-radius: 8px;
+           box-shadow: 0 8px 16px rgba(0,0,0,.14), 0 0 2px rgba(0,0,0,.12);
+           font: 14px/20px "Segoe UI Variable Text", "Segoe UI", "Microsoft JhengHei UI", sans-serif; }
+  .t-hdr { display: flex; align-items: center; gap: 8px; padding: 12px 12px 0 16px; font-size: 12px; line-height: 16px; }
+  .t-hdr img { width: 16px; height: 16px; }
+  .t-hdr .sp { flex: 1; }
+  .t-hdr svg { width: 16px; height: 16px; margin-left: 12px; color: var(--w-ink-2); }
+  .t-body { display: flex; gap: 14px; padding: 16px; }
+  .t-logo { position: relative; width: 48px; height: 48px; flex: none; }
+  .t-logo img { width: 48px; height: 48px; display: block; }
+  .t-badge { position: absolute; right: -2px; bottom: -2px; width: 26px; height: 26px; border-radius: 50%;
+             box-shadow: 0 0 0 3px var(--w-toast); display: grid; place-items: center; }
+  .t-badge svg { width: 14px; height: 14px; }
+  .ok { background: var(--ok); color: #fff; } .wait { background: var(--wait); color: #1a1a1a; } .init { background: var(--init); color: #fff; }
+  .t-txt { min-width: 0; flex: 1; }
+  .t-title { font-weight: 600; font-size: 15px; }
+  .t-line { color: var(--w-ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .t-attr { color: var(--w-ink-3); font-size: 12px; line-height: 16px; margin-top: 4px; }
+
+  .enter { animation: slide .36s cubic-bezier(.1,.9,.2,1) backwards; }
+  .desk figure:nth-child(2) .enter { animation-delay: .06s; } .desk figure:nth-child(3) .enter { animation-delay: .12s; }
+  @keyframes slide { from { transform: translateX(32px); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .enter { animation: none; } .seg span { transition: none; } }
+
+  @media (max-width: 960px) {
+    .wrap { padding: 28px 16px 56px; }
+    h1 { font-size: 24px; }
+    .desk { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+    .spec { grid-template-columns: 1fr; gap: 2px; }
+    .spec dd { margin-bottom: 12px; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Herdr 通知定稿</h1>
+  <p class="lede">agent 做完或需要你的時候，Windows 右下角會跳這則通知。標題先講狀態和專案，看一眼就知道要不要點，點下去會切到那個 agent。</p>
+
+  <form class="bar" id="controls">
+    <fieldset class="group"><legend>Agent</legend><div class="seg" id="g-a"></div></fieldset>
+    <fieldset class="group"><legend>Windows 外觀</legend><div class="seg" id="g-w"></div></fieldset>
+  </form>
+  <div class="desk" id="desk" data-win="light"></div>
+
+  <section aria-labelledby="h-spec">
+    <h2 id="h-spec">每一行放什麼</h2>
+    <dl class="spec">
+      <dt>標題</dt><dd>狀態 · Herdr 的 space 名稱</dd>
+      <dt>第二行</dt><dd>任務摘要，最多兩行。Claude 取終端標題，Codex 取你最後一則提問，Antigravity 抓不到就留空。剛啟動還沒任務時寫「可以開始下指令」。</dd>
+      <dt>底行</dt><dd>tab · git branch</dd>
+      <dt>角標</dt><dd>綠色勾、黃色驚嘆號、灰色播放鍵，顏色和形狀都不同，不靠顏色也分得出來。</dd>
+      <dt>點擊</dt><dd>切到那個 agent（<code>agent.focus</code>）</dd>
+    </dl>
+  </section>
+</main>
+
+<script>
+const GLYPH = {
+  ok:   '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.4 6.4l2.4 2.3 4.8-5.2"/></svg>',
+  wait: '<svg viewBox="0 0 12 12" fill="currentColor"><rect x="5" y="1.4" width="2" height="5.8" rx="1"/><circle cx="6" cy="9.7" r="1.25"/></svg>',
+  init: '<svg viewBox="0 0 12 12" fill="currentColor"><path d="M3.8 2.2v7.6L10 6z"/></svg>',
+};
+const CHROME = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="13" cy="8" r="1"/></svg>'
+             + '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+const STATE = { ok: "已完成", wait: "等你回覆", init: "初始化完成" };
+const AGENT = {
+  claude: { name: "Claude Code", img: "claude.png", space: "scan_gov", tab: "1", branch: "main",
+            line: { ok: "提交並推送變更", wait: "要用 force push 覆蓋遠端的 main 嗎？" } },
+  codex:  { name: "Codex", img: "codex.png", space: "herdr-notify-win", tab: "3", branch: "main",
+            line: { ok: "通知 icon 改成橘色，agy 和 codex 一併更新", wait: "沒有 icons.ps1，要新建嗎？" } },
+  antigravity: { name: "Antigravity", img: "antigravity.png", space: "wayne-base", tab: "2", branch: "main-fix",
+            line: { ok: "Hajj 五支資料設定畫面", wait: "要先跑 migration 嗎？" } },
+};
+
+const esc = t => t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+function toast(s, a) {
+  const g = AGENT[a], title = `${STATE[s]} · ${g.space}`, line = g.line[s] || "可以開始下指令";
+  return `<div class="toast enter" role="img" aria-label="${esc(`${g.name} 通知：${title}。${line}`)}">
+    <div class="t-hdr"><img src="${g.img}" alt=""><span>${g.name}</span><span class="sp"></span>${CHROME}</div>
+    <div class="t-body">
+      <div class="t-logo"><img src="${g.img}" alt=""><span class="t-badge ${s}">${GLYPH[s]}</span></div>
+      <div class="t-txt"><div class="t-title">${esc(title)}</div><div class="t-line">${esc(line)}</div>
+        <div class="t-attr">tab ${g.tab} · ${g.branch}</div></div>
+    </div></div>`;
+}
+
+const ui = { a: "claude", w: "light" };
+try { Object.assign(ui, JSON.parse(localStorage.getItem("toast-c") || "{}")); } catch {}
+const seg = (id, key, items) => document.getElementById(id).innerHTML = items.map(([v, label]) =>
+  `<label><input type="radio" name="${key}" value="${v}" ${ui[key] === v ? "checked" : ""}><span>${label}</span></label>`).join("");
+seg("g-a", "a", [["claude", "Claude"], ["codex", "Codex"], ["antigravity", "Antigravity"]]);
+seg("g-w", "w", [["light", "淺色"], ["dark", "深色"]]);
+
+function render() {
+  const desk = document.getElementById("desk");
+  desk.dataset.win = ui.w;
+  desk.innerHTML = Object.keys(STATE).map(s => `<figure>${toast(s, ui.a)}</figure>`).join("");
+}
+document.getElementById("controls").addEventListener("change", e => {
+  ui[e.target.name] = e.target.value;
+  try { localStorage.setItem("toast-c", JSON.stringify(ui)); } catch {}
+  render();
+});
+render();
+</script>
+</body>
+</html>
